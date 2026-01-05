@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YouTube Insight V7.5 - Data Sync</title>
+    <title>YouTube Insight V7.6 - Smart Sync</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     <style>
         /* --- Global --- */
@@ -152,7 +152,7 @@
 
 <div class="container">
     <div class="top-bar">
-        <h2 style="margin:0;">🔥 YouTube Insight V7.5</h2>
+        <h2 style="margin:0;">🔥 YouTube Insight V7.6</h2>
         <div style="display:flex; align-items:center;">
             <button onclick="openGuide()" class="btn-guide">📘 트렌드 공략집</button>
             <div style="display:flex; gap:5px;">
@@ -226,10 +226,10 @@
     <!-- TAB 4: MEMO & BACKUP -->
     <div id="tab-memo" class="hidden">
         <div class="explainer-box" style="border-left-color:#e65100; background:#fff8e1;">
-            <p style="margin:0;"><strong>🔄 데이터 공유 방법 (PC ↔ 모바일)</strong><br>
-            1. <strong>[📤 데이터 내보내기]</strong>를 눌러 파일을 저장하세요.<br>
-            2. 저장된 파일을 카톡/메일 등으로 다른 기기에 보내세요.<br>
-            3. 다른 기기에서 <strong>[📥 데이터 불러오기]</strong>를 눌러 파일을 선택하면 복원됩니다.</p>
+            <p style="margin:0;"><strong>🔄 스마트 동기화 (V7.6)</strong><br>
+            1. <strong>[📤 내보내기]</strong>: 현재 데이터를 파일로 저장합니다.<br>
+            2. <strong>[📥 불러오기]</strong>: 파일을 불러오면 <strong>새 영상은 추가</strong>하고, <strong>기존 영상의 메모는 업데이트</strong>(덮어쓰기) 합니다.<br>
+            ※ PC에서 메모를 수정하고 폰에서 불러오면 수정된 내용이 반영됩니다.</p>
         </div>
         
         <div class="backup-controls">
@@ -307,7 +307,7 @@
     function autoAnalyzeChannel(chName) { switchTab('channel'); document.getElementById('chInput').value = chName; analyzeChannel(); }
     function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
 
-    // --- MEMO & SYNC FUNCTIONS ---
+    // --- MEMO & SMART SYNC (V7.6) ---
     function saveItem(vid) {
         const item = [...kwData, ...chData, ...trData].find(x => x.id === vid);
         if (!item) return;
@@ -360,7 +360,7 @@
         renderMemo();
     }
 
-    // --- NEW: EXPORT / IMPORT DATA ---
+    // --- EXPORT / SMART IMPORT (V7.6) ---
     function exportData() {
         const dataStr = localStorage.getItem('yt_saved_v7');
         if(!dataStr || dataStr === '[]') return alert('백업할 데이터가 없습니다.');
@@ -379,17 +379,27 @@
             try {
                 const json = JSON.parse(e.target.result);
                 if(Array.isArray(json)) {
-                    if(confirm(`총 ${json.length}개의 데이터를 불러오시겠습니까?\n(기존 데이터에 추가됩니다)`)) {
-                        // Merge logic: Add only if ID doesn't exist
+                    if(confirm(`총 ${json.length}개의 데이터를 불러오시겠습니까?\n(새로운 영상은 추가되고, 기존 영상은 메모가 업데이트됩니다)`)) {
                         let addedCount = 0;
+                        let updatedCount = 0;
+                        
                         json.forEach(newItem => {
-                            if(!savedItems.find(exist => exist.id === newItem.id)) {
+                            const existingItem = savedItems.find(exist => exist.id === newItem.id);
+                            if (existingItem) {
+                                // V7.6 Smart Merge: If exists, overwrite the note
+                                if(existingItem.note !== newItem.note) {
+                                    existingItem.note = newItem.note;
+                                    updatedCount++;
+                                }
+                            } else {
+                                // If new, add it
                                 savedItems.push(newItem);
                                 addedCount++;
                             }
                         });
+                        
                         localStorage.setItem('yt_saved_v7', JSON.stringify(savedItems));
-                        alert(`✅ ${addedCount}개 데이터 복원 완료!`);
+                        alert(`✅ 복원 완료!\n- 추가됨: ${addedCount}개\n- 메모 업데이트됨: ${updatedCount}개`);
                         renderMemo();
                     }
                 } else {
