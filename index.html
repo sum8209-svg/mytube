@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YouTube Insight V6.2 - Mobile Ready</title>
+    <title>YouTube Insight V7.0 - Memo & Archive</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.mini.min.js"></script>
     <style>
         /* --- Global --- */
@@ -14,6 +14,7 @@
         .container { max-width: 1800px; margin: 0 auto; }
         .hidden { display: none !important; }
         button { cursor: pointer; transition: 0.2s; border: none; } button:hover { opacity: 0.9; }
+        textarea { font-family: 'Pretendard', sans-serif; }
 
         /* --- Header --- */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -24,13 +25,15 @@
         .tabs { display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 5px; }
         .tab-btn { padding: 12px 20px; background: none; border: none; font-size: 15px; font-weight: bold; color: #888; border-bottom: 4px solid transparent; flex-shrink: 0; }
         .tab-btn.active { color: #333; border-bottom-color: var(--primary); }
+        .tab-btn.memo-tab { color: #e65100; } /* Special color for Memo Tab */
+        .tab-btn.memo-tab.active { border-bottom-color: #e65100; }
 
         /* --- Filters --- */
         .filter-panel { background: var(--surface); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
         .filter-row-top { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
         .filter-row-bottom { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .filter-label { font-size: 12px; color: var(--primary); font-weight: bold; display: block; margin-bottom: 5px; }
-        select, input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; height: 42px; } /* Mobile touch friendly height */
+        select, input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; height: 42px; }
         .search-input { flex: 1; min-width: 250px; }
         .btn-search { background: #222; color: #fff; padding: 0 20px; height: 42px; border-radius: 4px; font-weight: bold; }
         .btn-excel { background: #1d6f42; color: #fff; padding: 0 20px; height: 42px; border-radius: 4px; font-weight: bold; }
@@ -81,6 +84,12 @@
         /* --- Buttons --- */
         .btn-sm { padding: 4px 6px; font-size: 11px; border-radius: 3px; border: none; color: white; margin-right: 2px; cursor: pointer; }
         .btn-detail { background: #7c3aed; } .btn-thumb { background: #555; } .btn-dl { background: #d32f2f; }
+        .btn-save { background: #ff9800; } /* Save Button Color */
+
+        /* --- Memo Styles --- */
+        .memo-textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; margin-top: 10px; font-size: 13px; line-height: 1.4; background: #fffbe6; }
+        .memo-textarea:focus { outline: 2px solid #ff9800; border-color: #ff9800; }
+        .memo-delete { background: #ff3d00; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; float: right; margin-top: 5px; }
 
         /* --- Channel Dashboard --- */
         .ch-info-box { background: var(--surface); border-radius: 8px; padding: 20px; display: flex; gap: 20px; margin-bottom: 20px; border: 1px solid var(--border); align-items: center; }
@@ -94,7 +103,7 @@
         .bg-yellow { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .bg-blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
 
-        /* --- Modals --- */
+        /* --- Modals & Mobile --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: #fff; width: 850px; max-width: 90%; max-height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
         .modal-header { padding: 18px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; background: #f9f9f9; }
@@ -108,13 +117,11 @@
         .guide-box li { margin-bottom: 5px; }
         .guide-highlight { background: #fff3cd; padding: 2px 5px; border-radius: 3px; font-weight: bold; }
         
-        /* --- Loader --- */
         .loader { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction: column; }
         .spinner { width:60px; height:60px; border:6px solid #fff; border-top:6px solid var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; }
         @keyframes spin{to{transform:rotate(360deg)}}
         .loader-text { color: white; margin-top: 15px; font-size: 14px; }
 
-        /* --- MOBILE MEDIA QUERY (The Magic) --- */
         @media screen and (max-width: 768px) {
             body { padding: 10px; }
             .top-bar { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
@@ -122,22 +129,17 @@
             .top-bar > div { flex-direction: column; width: 100%; gap: 10px; }
             .api-input { width: 100% !important; }
             .btn-guide { margin: 0 0 10px 0; width: 100%; }
-            
             .filter-row-top, .filter-row-bottom { flex-direction: column; align-items: stretch; gap: 10px; }
             .search-input { min-width: 0; }
             .btn-search, .btn-excel { width: 100%; }
             .view-toggle { margin-left: 0; justify-content: center; margin-top: 5px; }
             .view-btn { flex: 1; }
-            
             .ch-info-box { flex-direction: column; text-align: center; padding: 15px; }
             .ch-thumb { margin-bottom: 10px; }
             .ch-info-box > div > div { flex-direction: column; gap: 5px; }
-            
             .modal-content { width: 95%; max-height: 85vh; }
             .modal-header { padding: 15px; }
             .modal-body { padding: 15px; }
-            
-            /* Card Grid on mobile: 1 column usually */
             .card-grid { grid-template-columns: 1fr; }
         }
     </style>
@@ -146,7 +148,7 @@
 
 <div class="container">
     <div class="top-bar">
-        <h2 style="margin:0;">🔥 YouTube Insight V6.2</h2>
+        <h2 style="margin:0;">🔥 YouTube Insight V7.0</h2>
         <div style="display:flex; align-items:center;">
             <button onclick="openGuide()" class="btn-guide">📘 트렌드 공략집</button>
             <div style="display:flex; gap:5px;">
@@ -157,22 +159,17 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('keyword')">🔍 키워드 정밀 분석</button>
-        <button class="tab-btn" onclick="switchTab('channel')">📊 채널 패턴 분석</button>
-        <button class="tab-btn" onclick="switchTab('trending')">🔥 급상승 영상</button>
+        <button class="tab-btn active" onclick="switchTab('keyword')">🔍 키워드 분석</button>
+        <button class="tab-btn" onclick="switchTab('channel')">📊 채널 분석</button>
+        <button class="tab-btn" onclick="switchTab('trending')">🔥 급상승</button>
+        <button class="tab-btn memo-tab" onclick="switchTab('memo')">📝 보관함 & 메모</button>
     </div>
 
     <!-- TAB 1: KEYWORD -->
     <div id="tab-keyword">
         <div class="filter-panel">
             <div class="filter-row-top">
-                <div>
-                    <span class="filter-label">🌍 국가(Region)</span>
-                    <select id="apiRegion" style="width:100%">
-                        <option value="KR">🇰🇷 한국 (KR)</option><option value="US">🇺🇸 미국 (US)</option><option value="JP">🇯🇵 일본 (JP)</option>
-                        <option value="IN">🇮🇳 인도 (IN)</option><option value="GB">🇬🇧 영국 (UK)</option><option value="CA">🇨🇦 캐나다 (CA)</option><option value="AU">🇦🇺 호주 (AU)</option>
-                    </select>
-                </div>
+                <div><span class="filter-label">🌍 국가</span><select id="apiRegion" style="width:100%"><option value="KR">🇰🇷 한국</option><option value="US">🇺🇸 미국</option><option value="JP">🇯🇵 일본</option><option value="IN">🇮🇳 인도</option><option value="GB">🇬🇧 영국</option><option value="CA">🇨🇦 캐나다</option><option value="AU">🇦🇺 호주</option></select></div>
                 <div><span class="filter-label">📅 기간</span><select id="apiDate" style="width:100%"><option value="all">전체</option><option value="24h">24시간</option><option value="7d">7일</option><option value="30d">30일</option></select></div>
                 <div><span class="filter-label">⏱️ 길이</span><select id="apiDuration" style="width:100%"><option value="any">전체</option><option value="short">4분↓</option><option value="medium">4~20분</option><option value="long">20분↑</option></select></div>
                 <div><span class="filter-label">🎯 정렬</span><select id="apiOrder" style="width:100%"><option value="viewCount">조회수순</option><option value="relevance">관련성</option><option value="date">최신순</option></select></div>
@@ -187,24 +184,9 @@
                 </div>
             </div>
         </div>
-        
-        <div id="kwExplainer" class="explainer-box hidden">
-            <p style="margin:0 0 5px 0;"><strong>📊 지표 설명</strong> (리스트 뷰 전용)</p>
-            <div style="display:flex; gap:30px; flex-wrap:wrap;">
-                <div><span style="color:#7c3aed;">■</span> <strong>참여율:</strong> (좋아요+댓글)÷조회수</div>
-                <div><span style="color:#ff9800;">■</span> <strong>기여도:</strong> 영상조회수÷채널총조회수</div>
-            </div>
-        </div>
-        
+        <div id="kwExplainer" class="explainer-box hidden"><p style="margin:0 0 5px 0;"><strong>📊 지표 설명</strong></p><div style="display:flex; gap:30px; flex-wrap:wrap;"><div><span style="color:#7c3aed;">■</span> <strong>참여율:</strong> (좋아요+댓글)÷조회수</div><div><span style="color:#ff9800;">■</span> <strong>기여도:</strong> 영상조회수÷채널총조회수</div></div></div>
         <div id="kwCount" style="margin-bottom:10px; font-weight:bold; color:#555;"></div>
-        
-        <div id="kwListContainer" class="table-container hidden">
-            <table id="kwTable">
-                <thead><tr><th>썸네일</th> <th onclick="sortTable('kwTable',1)">제목 ↕</th> <th>태그</th> <th onclick="sortTable('kwTable',3)">게시일 ↕</th><th onclick="sortTable('kwTable',4)">구독자 ↕</th> <th onclick="sortTable('kwTable',5)">개설일 ↕</th> <th onclick="sortTable('kwTable',6)">조회수 ↕</th><th onclick="sortTable('kwTable',7)">좋아요 ↕</th> <th onclick="sortTable('kwTable',8)">댓글 ↕</th> <th onclick="sortTable('kwTable',9)">길이</th><th onclick="sortTable('kwTable',10)">영상수 ↕</th> <th onclick="sortTable('kwTable',11)">참여율(%) ↕</th> <th onclick="sortTable('kwTable',12)">기여도(%) ↕</th> <th>기능</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
+        <div id="kwListContainer" class="table-container hidden"><table id="kwTable"><thead><tr><th>썸네일</th> <th onclick="sortTable('kwTable',1)">제목 ↕</th> <th>태그</th> <th onclick="sortTable('kwTable',3)">게시일 ↕</th><th onclick="sortTable('kwTable',4)">구독자 ↕</th> <th onclick="sortTable('kwTable',5)">개설일 ↕</th> <th onclick="sortTable('kwTable',6)">조회수 ↕</th><th onclick="sortTable('kwTable',7)">좋아요 ↕</th> <th onclick="sortTable('kwTable',8)">댓글 ↕</th> <th onclick="sortTable('kwTable',9)">길이</th><th onclick="sortTable('kwTable',10)">영상수 ↕</th> <th onclick="sortTable('kwTable',11)">참여율(%) ↕</th> <th onclick="sortTable('kwTable',12)">기여도(%) ↕</th> <th>기능</th></tr></thead><tbody></tbody></table></div>
         <div id="kwCardContainer" class="card-grid"></div>
     </div>
 
@@ -217,70 +199,40 @@
                 <button class="btn-excel" onclick="exportExcel('channel')">💾 데이터 저장</button>
             </div>
         </div>
-
         <div id="chDashboard" class="hidden">
             <div class="ch-info-box">
                 <img id="chImg" class="ch-thumb" src="">
-                <div>
-                    <h2 id="chTitle" style="margin:0 0 8px 0;"></h2>
-                    <div id="chDesc" style="font-size:13px; color:#666; margin-bottom:10px; line-height:1.5;"></div>
-                    <div style="display:flex; gap:20px; font-size:14px;">
-                        <span><strong>👥 구독자:</strong> <span id="chSub"></span></span>
-                        <span><strong>👁️ 총 조회수:</strong> <span id="chView"></span></span>
-                        <span><strong>📹 영상수:</strong> <span id="chVidCnt"></span></span>
-                    </div>
-                </div>
+                <div><h2 id="chTitle" style="margin:0 0 8px 0;"></h2><div id="chDesc" style="font-size:13px; color:#666; margin-bottom:10px; line-height:1.5;"></div><div style="display:flex; gap:20px; font-size:14px;"><span><strong>👥 구독자:</strong> <span id="chSub"></span></span><span><strong>👁️ 총 조회수:</strong> <span id="chView"></span></span><span><strong>📹 영상수:</strong> <span id="chVidCnt"></span></span></div></div>
             </div>
-
             <div class="sec-header bg-green">📈 콘텐츠 성공 패턴 (최근 50개)</div>
-            <div class="pattern-grid">
-                <div class="pat-card"><div class="pat-label">평균 조회수</div><div class="pat-val" id="pView">-</div></div>
-                <div class="pat-card"><div class="pat-label">평균 좋아요</div><div class="pat-val" id="pLike">-</div></div>
-                <div class="pat-card"><div class="pat-label">평균 댓글</div><div class="pat-val" id="pCom">-</div></div>
-                <div class="pat-card"><div class="pat-label">평균 길이</div><div class="pat-val" id="pDur">-</div></div>
-                <div class="pat-card"><div class="pat-label">업로드 간격</div><div class="pat-val" id="pInt">-</div></div>
-                <div class="pat-card"><div class="pat-label">주요 요일</div><div class="pat-val" id="pDay">-</div></div>
-            </div>
-
+            <div class="pattern-grid"><div class="pat-card"><div class="pat-label">평균 조회수</div><div class="pat-val" id="pView">-</div></div><div class="pat-card"><div class="pat-label">평균 좋아요</div><div class="pat-val" id="pLike">-</div></div><div class="pat-card"><div class="pat-label">평균 댓글</div><div class="pat-val" id="pCom">-</div></div><div class="pat-card"><div class="pat-label">평균 길이</div><div class="pat-val" id="pDur">-</div></div><div class="pat-card"><div class="pat-label">업로드 간격</div><div class="pat-val" id="pInt">-</div></div><div class="pat-card"><div class="pat-label">주요 요일</div><div class="pat-val" id="pDay">-</div></div></div>
             <div class="sec-header bg-yellow">🏆 인기 영상 TOP 10</div>
-            <div class="table-container">
-                <table id="topTable"><thead><tr><th>썸네일</th><th>제목</th><th>조회수</th><th>좋아요</th><th>댓글</th><th>기여도</th><th>업로드일</th><th>기능</th></tr></thead><tbody></tbody></table>
-            </div>
-
+            <div class="table-container"><table id="topTable"><thead><tr><th>썸네일</th><th>제목</th><th>조회수</th><th>좋아요</th><th>댓글</th><th>기여도</th><th>업로드일</th><th>기능</th></tr></thead><tbody></tbody></table></div>
             <div class="sec-header bg-blue">🕒 최신 영상 TOP 10</div>
-            <div class="table-container">
-                <table id="recTable"><thead><tr><th>썸네일</th><th>제목</th><th>조회수</th><th>좋아요</th><th>댓글</th><th>기여도</th><th>업로드일</th><th>기능</th></tr></thead><tbody></tbody></table>
-            </div>
+            <div class="table-container"><table id="recTable"><thead><tr><th>썸네일</th><th>제목</th><th>조회수</th><th>좋아요</th><th>댓글</th><th>기여도</th><th>업로드일</th><th>기능</th></tr></thead><tbody></tbody></table></div>
         </div>
     </div>
 
     <!-- TAB 3: TRENDING -->
     <div id="tab-trending" class="hidden">
-        <div class="filter-panel">
-            <div class="filter-row-bottom">
-                <div>
-                    <span class="filter-label">🌍 국가(Region)</span>
-                    <select id="trendRegion" style="width:100%">
-                        <option value="KR">🇰🇷 한국</option><option value="US">🇺🇸 미국</option><option value="JP">🇯🇵 일본</option>
-                        <option value="IN">🇮🇳 인도</option><option value="GB">🇬🇧 영국</option>
-                    </select>
-                </div>
-                <div><span class="filter-label">🏷️ 카테고리</span>
-                    <select id="trendCat" style="width:100%">
-                        <option value="0">전체</option><option value="1">영화/애니</option><option value="2">자동차</option><option value="10">음악</option>
-                        <option value="15">애완동물</option><option value="17">스포츠</option><option value="19">여행</option><option value="20">게임</option>
-                        <option value="22">블로그</option><option value="23">코미디</option><option value="24">엔터테인먼트</option><option value="25">뉴스/정치</option>
-                        <option value="26">노하우/스타일</option><option value="27">교육</option><option value="28">과학기술</option>
-                    </select>
-                </div>
-                <button class="btn-search" onclick="fetchTrending()">🔥 급상승 분석</button>
-            </div>
+        <div class="filter-panel"><div class="filter-row-bottom"><div><span class="filter-label">🌍 국가</span><select id="trendRegion" style="width:100%"><option value="KR">🇰🇷 한국</option><option value="US">🇺🇸 미국</option><option value="JP">🇯🇵 일본</option><option value="IN">🇮🇳 인도</option><option value="GB">🇬🇧 영국</option></select></div><div><span class="filter-label">🏷️ 카테고리</span><select id="trendCat" style="width:100%"><option value="0">전체</option><option value="1">영화/애니</option><option value="2">자동차</option><option value="10">음악</option><option value="15">애완동물</option><option value="17">스포츠</option><option value="19">여행</option><option value="20">게임</option><option value="22">블로그</option><option value="23">코미디</option><option value="24">엔터테인먼트</option><option value="25">뉴스/정치</option><option value="26">노하우/스타일</option><option value="27">교육</option><option value="28">과학기술</option></select></div><button class="btn-search" onclick="fetchTrending()">🔥 급상승 분석</button></div></div>
+        <div class="table-container"><table id="trendTable"><thead><tr><th>순위</th><th>썸네일</th><th>제목</th><th>채널명</th><th>조회수</th><th>게시일</th><th>기능</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- TAB 4: MEMO (SAVED) -->
+    <div id="tab-memo" class="hidden">
+        <div class="explainer-box" style="border-left-color:#e65100; background:#fff8e1;">
+            <p style="margin:0;"><strong>📝 분석 보관함 사용법</strong><br>
+            - 다른 탭에서 <strong>[💾 저장]</strong> 버튼을 누르면 이곳에 담깁니다.<br>
+            - 영상별로 아이디어, 벤치마킹 포인트 등을 기록하세요. (자동 저장됨)<br>
+            - <strong>[엑셀 저장]</strong>을 누르면 메모 내용까지 포함해서 다운로드됩니다.</p>
         </div>
-        <div class="table-container">
-            <table id="trendTable">
-                <thead><tr><th>순위</th><th>썸네일</th><th>제목</th><th>채널명</th><th>조회수</th><th>게시일</th><th>기능</th></tr></thead>
-                <tbody></tbody>
-            </table>
+        <div style="text-align:right; margin-bottom:10px;">
+            <button class="btn-excel" onclick="exportMemoExcel()">💾 메모 전체 엑셀 다운로드</button>
+        </div>
+        <div id="memoContainer" class="card-grid"></div>
+        <div id="noMemoMsg" style="text-align:center; padding:50px; color:#999; display:none;">
+            아직 저장된 영상이 없습니다.<br>검색 결과에서 <strong>[💾 저장]</strong> 버튼을 눌러보세요!
         </div>
     </div>
 
@@ -296,21 +248,21 @@
     if(API_KEY) document.getElementById('apiKey').value = API_KEY;
     
     let kwData = [], chData = [], trData = [];
+    let savedItems = JSON.parse(localStorage.getItem('yt_saved_v7') || '[]');
     let currVidId = '', currPageToken = '';
     let currentView = 'card';
 
-    // Auto-detect Mobile to set Card View
-    if(window.innerWidth <= 768) {
-        toggleView('card');
-    }
+    if(window.innerWidth <= 768) toggleView('card');
 
     function saveKey() { API_KEY=document.getElementById('apiKey').value.trim(); localStorage.setItem('yt_api_key_v5', API_KEY); alert('✅ API Key 저장 완료'); }
+    
     function switchTab(t) {
         document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
         document.querySelectorAll('[id^="tab-"]').forEach(d=>d.classList.add('hidden'));
         const btn = document.querySelector(`.tab-btn[onclick="switchTab('${t}')"]`);
         if(btn) btn.classList.add('active');
         document.getElementById(`tab-${t}`).classList.remove('hidden');
+        if(t === 'memo') renderMemo(); // Render memos when tab clicked
     }
     
     function toggleView(v) {
@@ -344,12 +296,73 @@
     function autoAnalyzeChannel(chName) { switchTab('channel'); document.getElementById('chInput').value = chName; analyzeChannel(); }
     function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
 
-    // --- 1. KEYWORD ---
+    // --- MEMO FUNCTIONS ---
+    function saveItem(vid) {
+        const item = [...kwData, ...chData, ...trData].find(x => x.id === vid);
+        if (!item) return;
+        if (savedItems.find(x => x.id === vid)) return alert('이미 보관함에 있습니다.');
+        
+        savedItems.push({ ...item, note: '' }); // Add empty note
+        localStorage.setItem('yt_saved_v7', JSON.stringify(savedItems));
+        if(confirm('✅ 보관함에 저장되었습니다.\n바로 메모를 작성하시겠습니까?')) {
+            switchTab('memo');
+        }
+    }
+
+    function renderMemo() {
+        const c = document.getElementById('memoContainer');
+        c.innerHTML = '';
+        if (savedItems.length === 0) {
+            document.getElementById('noMemoMsg').style.display = 'block';
+            return;
+        }
+        document.getElementById('noMemoMsg').style.display = 'none';
+
+        savedItems.forEach(d => {
+            c.innerHTML += `<div class="card">
+                <div class="c-thumb-box" onclick="window.open('https://youtu.be/${d.id}', '_blank')">
+                    <img src="${d.thumb}" class="c-thumb">
+                </div>
+                <div class="c-body">
+                    <div class="c-title">${d.title}</div>
+                    <div class="c-meta">${d.channel} | ${d.date}</div>
+                    <textarea class="memo-textarea" placeholder="아이디어, 벤치마킹 포인트 등을 적어주세요..." oninput="updateNote('${d.id}', this.value)">${d.note || ''}</textarea>
+                    <button class="memo-delete" onclick="deleteMemo('${d.id}')">삭제</button>
+                    <div style="clear:both;"></div>
+                </div>
+            </div>`;
+        });
+    }
+
+    function updateNote(id, text) {
+        const idx = savedItems.findIndex(x => x.id === id);
+        if (idx >= 0) {
+            savedItems[idx].note = text;
+            localStorage.setItem('yt_saved_v7', JSON.stringify(savedItems));
+        }
+    }
+
+    function deleteMemo(id) {
+        if (!confirm('정말 보관함에서 삭제하시겠습니까?')) return;
+        savedItems = savedItems.filter(x => x.id !== id);
+        localStorage.setItem('yt_saved_v7', JSON.stringify(savedItems));
+        renderMemo();
+    }
+
+    function exportMemoExcel() {
+        if(!savedItems.length) return alert('저장된 메모가 없습니다.');
+        const data = savedItems.map(d => ({ '제목': d.title, '채널명': d.channel, '메모': d.note, '조회수': d.view, '게시일': d.date, 'URL': `https://youtu.be/${d.id}` }));
+        const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Memo_Data"); XLSX.writeFile(wb, `YouTube_메모_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    // --- API FUNCTIONS (Keyword, Channel, Trending) ---
+    // (Added Save Button logic in render)
+    
     async function fetchKeywordData() {
         if(!API_KEY) return alert('⚠️ API Key를 먼저 입력해주세요.');
         const k = document.getElementById('kwInput').value.trim();
         if(!k) return alert('⚠️ 검색어를 입력해주세요.');
-        
         showLoader(true); kwData = [];
         try {
             let items = [], token = '';
@@ -385,11 +398,8 @@
             kwData = items.map(i => {
                 const v = vMap[i.id.videoId]; const c = cMap[i.snippet.channelId];
                 if(!v || !c) return null;
-                
                 const view = parseInt(v.statistics.viewCount||0);
                 const sub = parseInt(c.statistics.subscriberCount||1);
-                const like = parseInt(v.statistics.likeCount||0);
-                const com = parseInt(v.statistics.commentCount||0);
                 const chView = parseInt(c.statistics.viewCount||1);
                 const score = (view / sub) * 100; 
                 let vBadge = { t:"🏳️ 일반", c:"lv-1" };
@@ -404,12 +414,11 @@
                     thumb: v.snippet.thumbnails.high ? v.snippet.thumbnails.high.url : v.snippet.thumbnails.medium.url,
                     date: i.snippet.publishedAt.substring(0,10), desc: v.snippet.description,
                     tags: [...(v.snippet.tags||[]), ...(v.snippet.description.match(/#[^\s#]+/g)||[])].slice(0, 10).join(', '),
-                    sub: sub, view: view, like: like, com: com, chCreated: c.snippet.publishedAt.substring(0,10),
+                    sub: sub, view: view, like: parseInt(v.statistics.likeCount||0), com: parseInt(v.statistics.commentCount||0), chCreated: c.snippet.publishedAt.substring(0,10),
                     durStr: parseDurationStr(v.contentDetails.duration),
                     chVidCnt: parseInt(c.statistics.videoCount||0),
-                    engage: view>0 ? ((like+com)/view*100).toFixed(2) : 0,
-                    contrib: (view / chView * 100).toFixed(4),
-                    badge: vBadge
+                    engage: view>0 ? ((parseInt(v.statistics.likeCount||0)+parseInt(v.statistics.commentCount||0))/view*100).toFixed(2) : 0,
+                    contrib: (view / chView * 100).toFixed(4), badge: vBadge
                 };
             }).filter(x=>x);
 
@@ -429,27 +438,25 @@
              const conW = Math.min(d.contrib * 1000, 100);
              tb.innerHTML += `<tr>
                 <td class="t-thumb" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}"></td>
-                <td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div><div class="t-channel" onclick="autoAnalyzeChannel('${d.channel.replace(/'/g, "\\'")}')" title="이 채널 분석하기">👉 ${d.channel}</div></td>
+                <td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div><div class="t-channel" onclick="autoAnalyzeChannel('${d.channel.replace(/'/g, "\\'")}')">👉 ${d.channel}</div></td>
                 <td><div class="t-tags" title="${d.tags}">${d.tags}</div></td>
                 <td>${d.date}</td><td>${fmt(d.sub)}</td><td>${d.chCreated}</td><td>${fmt(d.view)}</td><td>${fmt(d.like)}</td><td>${fmt(d.com)}</td>
                 <td>${d.durStr}</td><td>${fmt(d.chVidCnt)}</td>
                 <td><div class="cell-val">${d.engage}%</div><div class="bar-container"><div class="bar-fill bar-purple" style="width:${engW}%"></div></div></td>
                 <td><div class="cell-val">${d.contrib}%</div><div class="bar-container"><div class="bar-fill bar-orange" style="width:${conW}%"></div></div></td>
-                <td style="white-space:nowrap;"><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button><button class="btn-sm btn-thumb" onclick="dlThumb('${maxRes}','${fname}')">썸</button><button class="btn-sm btn-dl" onclick="window.open('https://www.ssyoutube.com/watch?v=${d.id}')">DL</button></td>
+                <td style="white-space:nowrap;"><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button><button class="btn-sm btn-save" onclick="saveItem('${d.id}')">💾 저장</button><button class="btn-sm btn-thumb" onclick="dlThumb('${maxRes}','${fname}')">썸</button><button class="btn-sm btn-dl" onclick="window.open('https://www.ssyoutube.com/watch?v=${d.id}')">DL</button></td>
              </tr>`;
         });
         const cg = document.getElementById('kwCardContainer'); cg.innerHTML='';
         kwData.forEach(d => {
-             cg.innerHTML += `<div class="card"><div class="c-thumb-box" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}" class="c-thumb"><div class="c-dur">${d.durStr}</div></div><div class="c-body"><div class="c-title" title="${d.title}">${d.title}</div><div class="c-meta"><span class="c-channel-link" onclick="autoAnalyzeChannel('${d.channel.replace(/'/g, "\\'")}')">👉 ${d.channel}</span><span>${d.date}</span></div><div class="viral-badge ${d.badge.c}">${d.badge.t}</div><div class="c-stats"><span>👁️ ${fmt(d.view)}</span><span>👍 ${fmt(d.like)}</span><span>⚡ ${d.contrib}%</span></div><button class="btn-sm btn-detail" style="width:100%; padding:10px; margin-top:5px;" onclick="openModal('${d.id}')">상세 & 댓글</button></div></div>`;
+             cg.innerHTML += `<div class="card"><div class="c-thumb-box" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}" class="c-thumb"><div class="c-dur">${d.durStr}</div></div><div class="c-body"><div class="c-title" title="${d.title}">${d.title}</div><div class="c-meta"><span class="c-channel-link" onclick="autoAnalyzeChannel('${d.channel.replace(/'/g, "\\'")}')">👉 ${d.channel}</span><span>${d.date}</span></div><div class="viral-badge ${d.badge.c}">${d.badge.t}</div><div class="c-stats"><span>👁️ ${fmt(d.view)}</span><span>👍 ${fmt(d.like)}</span><span>⚡ ${d.contrib}%</span></div><div style="display:flex;gap:5px;margin-top:5px;"><button class="btn-sm btn-save" style="flex:1;padding:8px;" onclick="saveItem('${d.id}')">💾 보관</button><button class="btn-sm btn-detail" style="flex:1;padding:8px;" onclick="openModal('${d.id}')">상세</button></div></div></div>`;
         });
-        if(window.innerWidth > 768) toggleView(currentView); // Keep current view on Desktop
+        if(window.innerWidth > 768) toggleView(currentView);
     }
 
-    // --- 2. CHANNEL ---
     async function analyzeChannel() {
         const name = document.getElementById('chInput').value.trim();
         if(!name) return alert('⚠️ 채널명을 입력해주세요.');
-        if(!API_KEY) return alert('⚠️ API Key를 먼저 저장해주세요.');
         showLoader(true);
         try {
             const sRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(name)}&type=channel&maxResults=1&key=${API_KEY}`);
@@ -480,7 +487,7 @@
                 tDurSec += parseDurationSec(v.contentDetails.duration);
                 dayCount[new Date(v.snippet.publishedAt).getDay()]++;
                 if(idx < videos.length - 1) intervals.push(Math.abs(new Date(v.snippet.publishedAt)-new Date(videos[idx+1].snippet.publishedAt))/(1000*3600*24));
-                return { id: v.id, title: v.snippet.title, thumb: v.snippet.thumbnails.default.url, view: view, like: parseInt(v.statistics.likeCount), com: parseInt(v.statistics.commentCount), date: v.snippet.publishedAt.substring(0,10), desc: v.snippet.description, contrib: (view / chTotalView * 100).toFixed(4) };
+                return { id: v.id, title: v.snippet.title, channel: ch.snippet.title, thumb: v.snippet.thumbnails.default.url, view: view, like: parseInt(v.statistics.likeCount), com: parseInt(v.statistics.commentCount), date: v.snippet.publishedAt.substring(0,10), desc: v.snippet.description, contrib: (view / chTotalView * 100).toFixed(4) };
             });
             const cnt = videos.length || 1;
             document.getElementById('pView').innerText = fmt(Math.round(tView/cnt));
@@ -497,7 +504,7 @@
             const topIds = topJson.items.map(i=>i.id.videoId).join(',');
             const topVRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${topIds}&key=${API_KEY}`);
             const topVJson = await topVRes.json();
-            const topData = topVJson.items.map(v => ({ id: v.id, title: v.snippet.title, thumb: v.snippet.thumbnails.default.url, view: parseInt(v.statistics.viewCount), like: parseInt(v.statistics.likeCount), com: parseInt(v.statistics.commentCount), date: v.snippet.publishedAt.substring(0,10), desc: v.snippet.description, contrib: (parseInt(v.statistics.viewCount) / chTotalView * 100).toFixed(4) }));
+            const topData = topVJson.items.map(v => ({ id: v.id, title: v.snippet.title, channel: ch.snippet.title, thumb: v.snippet.thumbnails.default.url, view: parseInt(v.statistics.viewCount), like: parseInt(v.statistics.likeCount), com: parseInt(v.statistics.commentCount), date: v.snippet.publishedAt.substring(0,10), desc: v.snippet.description, contrib: (parseInt(v.statistics.viewCount) / chTotalView * 100).toFixed(4) }));
             renderChTable('topTable', topData);
             chData = [...topData, ...recentData];
             document.getElementById('chDashboard').classList.remove('hidden');
@@ -506,11 +513,10 @@
     function renderChTable(tid, data) {
         const tb = document.querySelector(`#${tid} tbody`); tb.innerHTML='';
         data.forEach(d => {
-            tb.innerHTML += `<tr><td class="t-thumb" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}"></td><td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div></td><td>${fmt(d.view)}</td><td>${fmt(d.like||0)}</td><td>${fmt(d.com||0)}</td><td style="color:#e65100; font-weight:bold;">${d.contrib}%</td><td>${d.date}</td><td><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button></td></tr>`;
+            tb.innerHTML += `<tr><td class="t-thumb" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}"></td><td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div></td><td>${fmt(d.view)}</td><td>${fmt(d.like||0)}</td><td>${fmt(d.com||0)}</td><td style="color:#e65100; font-weight:bold;">${d.contrib}%</td><td>${d.date}</td><td><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button><button class="btn-sm btn-save" onclick="saveItem('${d.id}')">💾 저장</button></td></tr>`;
         });
     }
 
-    // --- 3. TRENDING ---
     async function fetchTrending() {
         if(!API_KEY) return alert('⚠️ API Key를 먼저 저장해주세요.');
         const cat = document.getElementById('trendCat').value;
@@ -523,7 +529,7 @@
             const tb = document.querySelector('#trendTable tbody'); tb.innerHTML='';
             trData = json.items.map((v,i) => {
                 const d = { id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, thumb: v.snippet.thumbnails.default.url, view: parseInt(v.statistics.viewCount), date: v.snippet.publishedAt.substring(0,10), desc: v.snippet.description };
-                tb.innerHTML += `<tr><td>${i+1}</td><td class="t-thumb" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}"></td><td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div></td><td>${d.channel}</td><td>${fmt(d.view)}</td><td>${d.date}</td><td><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button></td></tr>`;
+                tb.innerHTML += `<tr><td>${i+1}</td><td class="t-thumb" onclick="window.open('https://youtu.be/${d.id}', '_blank')"><img src="${d.thumb}"></td><td><div class="t-title" onclick="window.open('https://youtu.be/${d.id}', '_blank')">${d.title}</div></td><td>${d.channel}</td><td>${fmt(d.view)}</td><td>${d.date}</td><td><button class="btn-sm btn-detail" onclick="openModal('${d.id}')">상세</button><button class="btn-sm btn-save" onclick="saveItem('${d.id}')">💾 저장</button></td></tr>`;
                 return d;
             });
         } catch(e) { alert('❌ 오류: ' + e.message); } finally { showLoader(false); }
@@ -543,7 +549,7 @@
         XLSX.utils.book_append_sheet(wb, ws, "YouTube_Data"); XLSX.writeFile(wb, `YouTube_분석_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
     function openModal(vid) {
-        const i = [...kwData, ...chData, ...trData].find(x=>x.id===vid);
+        const i = [...kwData, ...chData, ...trData, ...savedItems].find(x=>x.id===vid);
         if(!i) return;
         document.getElementById('mTitle').innerText = i.title;
         document.getElementById('mDesc').innerText = i.desc || '(설명 없음)';
